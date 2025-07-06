@@ -5,6 +5,7 @@ function M_tilde = M_tilde_fn(q, t, fault_time)
     else
         % Fault injected: increase mass effect in first link by 50%
         M_tilde = M_nominal;
-        M_tilde(1,1) = 1.5 * M_nominal(1,1);
+        %M_tilde(1,1) = 1.5 * M_nominal(1,1);
+        M_tilde(1,1) = 3 * M_nominal(1,1);
     end
 end
