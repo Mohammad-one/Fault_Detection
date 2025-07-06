@@ -21,9 +21,10 @@ state.q = [0; 0];
 state.q_dot = [0; 0];       
 
 %% Desired Trajectory Parameters (from paper)
-A = 11.45 * pi/180;   % Amplitude in radians (~0.2 rad)
+A = 19.45 * pi/180;   % Amplitude in radians (~0.2 rad)
 f = 1/(2*pi);         % Frequency in Hz (~0.159 Hz)
 omega = 2 * pi * f;   % Angular frequency in rad/s
+trajectory = @(t) sinusoidal_trajectory(t, 11.45 * pi/180, 1/(2*pi));
 
 %% Controller Gains (as per paper)
 Kp = 100 * eye(2);    % 2x2 diagonal with 100
@@ -37,48 +38,18 @@ data.q_hist = zeros(2, length(sim.t));
 data.q_dot_hist = zeros(2, length(sim.t));
 data.tau_hist = zeros(2, length(sim.t));
 
-%% Main Simulation Loop
-%{
-for i = 1:length(sim.t)
-    t_curr = sim.t(i);
-    
-    % Desired trajectory and derivatives
-    q_d = A * [sin(omega * t_curr); sin(omega * t_curr)];
-    q_dot_d = A * omega * [cos(omega * t_curr); cos(omega * t_curr)];
-    q_ddot_d = -A * omega^2 * [sin(omega * t_curr); sin(omega * t_curr)];
-    
-    % Store desired trajectory
-    data.q_d_hist(:, i) = q_d;
-    data.q_dot_d_hist(:, i) = q_dot_d;
-    data.q_ddot_d_hist(:, i) = q_ddot_d;
-    
-    % Compute control torque using updated control law (no inputs Kp, Kd)
-    %tau = control_law(state.q, state.q_dot, q_d, q_dot_d, q_ddot_d, sys.M, sys.Vm, sys.G);
-    tau = control_law(state.q, state.q_dot, q_d, q_dot_d, q_ddot_d, Kp, Kd, sys.M, sys.Vm, sys.G);
-
-
-    % Compute acceleration using manipulator dynamics without faults
-    q_ddot = manipulator_dynamics(state.q, state.q_dot, tau, sys.M, sys.Vm, sys.G);
-    
-    % Store actual states and inputs
-    data.q_hist(:, i) = state.q;
-    data.q_dot_hist(:, i) = state.q_dot;
-    data.tau_hist(:, i) = tau;
-    
-    % Integrate states using Euler method
-    state.q_dot = state.q_dot + q_ddot * sim.dt;
-    state.q = state.q + state.q_dot * sim.dt;
-
-%}
-
 %% Main Simulation Loop (with fault term)
 for i = 1:length(sim.t)
     t_curr = sim.t(i);
     
     % Desired trajectory and derivatives
+    %{
     q_d = A * [sin(omega * t_curr); sin(omega * t_curr)];
     q_dot_d = A * omega * [cos(omega * t_curr); cos(omega * t_curr)];
     q_ddot_d = -A * omega^2 * [sin(omega * t_curr); sin(omega * t_curr)];
+    %}
+    [q_d, q_dot_d, q_ddot_d] = trajectory(t_curr);
+
     
     % Store desired trajectory
     data.q_d_hist(:, i) = q_d;
@@ -164,3 +135,12 @@ legend('τ₁', 'τ₂'); title('Control Inputs');
 grid on;
 
 disp('Simulation completed successfully.');
+
+%% Trajectory Functions
+% Sinusoidal trajectory function
+function [q_d, q_dot_d, q_ddot_d] = sinusoidal_trajectory(t, A, f)
+    omega = 2 * pi * f;
+    q_d = A * [sin(omega * t); sin(omega * t)];
+    q_dot_d = A * omega * [cos(omega * t); cos(omega * t)];
+    q_ddot_d = -A * omega^2 * [sin(omega * t); sin(omega * t)];
+end
